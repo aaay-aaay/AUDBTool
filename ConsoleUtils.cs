@@ -30,7 +30,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
                     Console.Write("/");
                     Console.Write(options[i]);
                 }
-                Console.Write("] ");
+                Console.Write("]\n> ");
                 string text = Console.ReadLine();
                 if (!options.Contains(text))
                 {
@@ -48,6 +48,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
         internal static bool PromptBinary(string message)
         {
             Console.WriteLine($"{message} (y/n)");
+            Console.Write("> ");
             for (; ; )
             {
                 var r = Console.ReadLine();
@@ -63,7 +64,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
         }
         internal static int PromptInt(string prompt)
         {
-            Console.Write("{0} ", prompt);
+            Console.Write("{0}\n> ", prompt);
             string s = Console.ReadLine();
             int result;
             for (; ; )

@@ -94,7 +94,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 			{
 				try
 				{
-					bool flag3 = QueuedAction != null;
+					bool ActionIsQueued = QueuedAction != null;
 					string userResponse = QueuedAction ?? Prompt("What do you want to do?", options);
 					switch (userResponse)
 					{
@@ -267,7 +267,17 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 									Console.WriteLine("NOTE: \"filename\" in this context means name of the file returned on a manual download; irrelevant for AutoUpdate.");
 									if (PromptBinary("Are you sure you want to create this mod entry on AUDB?"))
                                     {
-										string updateURL = PostStringToURL(wc, "http://beestuff.pythonanywhere.com/audb/api/mods/new", jss.Serialize(builtResponse));
+										string updateURL;
+                                        try
+                                        {
+											updateURL = PostStringToURL(wc, "http://beestuff.pythonanywhere.com/audb/api/mods/new", jss.Serialize(builtResponse));
+										}
+                                        catch (Exception e)
+                                        {
+											Console.WriteLine("Couldn't create the mod:");
+											Console.WriteLine(e);
+											break;
+                                        }
 										Console.WriteLine("// ------------------------------------------------");
 										Console.WriteLine("// Code for AutoUpdate support");
 										Console.WriteLine("// Should be put in the main PartialityMod class.");
@@ -322,7 +332,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 								{
 									currModID = PromptInt("Please enter the mod ID you want to upload.");
 								}
-								Console.Write("Please enter local filepath of the mod to upload:");
+								Console.Write("Please enter local filepath of the mod to upload:\n> ");
 								string locPath = Console.ReadLine();
 								try
 								{
@@ -341,69 +351,94 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 								currModID = -1;
 								break;
 							}
-					case "uploadthumb":
-					{
-						JavaScriptSerializer javaScriptSerializer = new JavaScriptSerializer();
-						string stringFromURL4 = GetStringFromURL(wc, "http://beestuff.pythonanywhere.com/keydb/api/keys/" + currUID.ToString());
-						KeyStructure keyStructure2 = javaScriptSerializer.Deserialize<KeyStructure>(stringFromURL4);
-						for (int i = 0; i < keyStructure2.audb.mods.Count; i++)
-						{
-							Console.WriteLine("Mod ID {0}: {1}", i, keyStructure2.audb.mods[i].metadata.name);
-						}
-						if (currModID == -1)
-						{
-							currModID = PromptInt("Please enter the mod ID you want to upload the thumbnail (image) of.");
-						}
-						Console.Write("Please enter the filename of the image you want to upload: ");
-						string text9 = Console.ReadLine();
-						byte[] array2 = File.ReadAllBytes(text9);
-						DoAuthstring(wc, rsa_csp, currentKey, javaScriptSerializer);
-						PostFileToURL(wc, "http://beestuff.pythonanywhere.com/audb/api/mods/" + currModID.ToString() + "/thumb", text9);
-						currModID = -1;
-						break;
-					}
-					case "sign":
-					{
-						Console.WriteLine("WARNING: Signing data is the only method of authorization for AUDB. ONLY do this if Pastebin has manually asked you to, or you know EXACTLY what you are doing! NO EXCEPTIONS!");
-						Console.Write("anyway now that we've done that warning, what do you actually want to sign? (there's no confirmation so input it right the first time please) ");
-						string s = Console.ReadLine();
-						byte[] inArray2 = rsa_csp.SignData(Encoding.ASCII.GetBytes(s), "SHA512");
-						string str2 = Convert.ToBase64String(inArray2);
-						Console.WriteLine("signature: " + str2);
-						break;
-					}
-					case "versions":
-					{
-						JavaScriptSerializer javaScriptSerializer = new JavaScriptSerializer();
-						string stringFromURL5 = GetStringFromURL(wc, "http://beestuff.pythonanywhere.com/keydb/api/keys");
-						List<KeyStructure> list = javaScriptSerializer.Deserialize<List<KeyStructure>>(stringFromURL5);
-						for (int i = 0; i < list.Count; i++)
-						{
-							KeyStructure keyStructure3 = list[i];
-							Console.WriteLine("KEY {0} ({1})", i, keyStructure3.metadata.name);
-							for (int j = 0; j < keyStructure3.audb.mods.Count; j++)
+						case "uploadthumb":
 							{
-								ModStructure modStructure = keyStructure3.audb.mods[j];
-								Console.WriteLine("{0} ({1}) - version {2}", j, modStructure.metadata.name, modStructure.version);
+								JavaScriptSerializer jss = new JavaScriptSerializer();
+								string json;
+								KeyStructure ks;
+								try
+                                {
+									json = GetStringFromURL(wc, "http://beestuff.pythonanywhere.com/keydb/api/keys/" + currUID.ToString());
+									ks = jss.Deserialize<KeyStructure>(json);
+								}
+								catch (Exception e)
+                                {
+									Console.WriteLine("Error fetching data from AUDB:");
+									Console.WriteLine(e);
+									break;
+                                }
+								
+								for (int i = 0; i < ks.audb.mods.Count; i++)
+								{
+									Console.WriteLine("Mod ID {0}: {1}", i, ks.audb.mods[i].metadata.name);
+								}
+								if (currModID == -1)
+								{
+									currModID = PromptInt("Please enter the mod ID you want to upload the thumbnail (image) of.");
+								}
+								Console.Write("Please enter the filename of the image you want to upload: ");
+								string text9 = Console.ReadLine();
+								byte[] array2 = File.ReadAllBytes(text9);
+								DoAuthstring(wc, rsa_csp, currentKey, jss);
+								PostFileToURL(wc, "http://beestuff.pythonanywhere.com/audb/api/mods/" + currModID.ToString() + "/thumb", text9);
+								currModID = -1;
+								break;
 							}
-						}
-						break;
+						case "sign":
+                            {
+								Console.WriteLine("WARNING: Signing data is the only method of authorization for AUDB. ONLY do this if Pastebin has manually asked you to, or you know EXACTLY what you are doing! NO EXCEPTIONS!");
+								Console.Write("anyway now that we've done that warning, what do you actually want to sign? (there's no confirmation so input it right the first time please) ");
+								string s = Console.ReadLine();
+								byte[] inArray2 = rsa_csp.SignData(Encoding.ASCII.GetBytes(s), "SHA512");
+								string str2 = Convert.ToBase64String(inArray2);
+								Console.WriteLine("signature: " + str2);
+								break;
+							}
+
+						case "versions":
+                            {
+								JavaScriptSerializer jss = new JavaScriptSerializer();
+								string stringFromURL5;
+								List<KeyStructure> list;
+								try
+                                {
+									stringFromURL5 = GetStringFromURL(wc, "http://beestuff.pythonanywhere.com/keydb/api/keys");
+									list = jss.Deserialize<List<KeyStructure>>(stringFromURL5);
+								}
+								catch (Exception e)
+                                {
+									Console.WriteLine("Error fetching data from AUDB:");
+									Console.WriteLine(e);
+									break;
+                                }
+								
+								for (int i = 0; i < list.Count; i++)
+								{
+									KeyStructure keyStructure3 = list[i];
+									Console.WriteLine("KEY {0} ({1})", i, keyStructure3.metadata.name);
+									for (int j = 0; j < keyStructure3.audb.mods.Count; j++)
+									{
+										ModStructure modStructure = keyStructure3.audb.mods[j];
+										Console.WriteLine("{0} ({1}) - version {2}", j, modStructure.metadata.name, modStructure.version);
+									}
+								}
+								break;
+							}
+						case "hash":
+							{
+								Console.WriteLine("Warning: This is intended for Bee's use only, so it's quite unfriendly");
+								string filename = Console.ReadLine();
+								byte[] data = File.ReadAllBytes(filename);
+								byte[] hash;
+								using (SHA512 shaM = new SHA512Managed())
+								{
+									hash = shaM.ComputeHash(data);
+								}
+								Console.WriteLine(Convert.ToBase64String(hash));
+								break;
+							}
 					}
-                    case "hash":
-                    {
-                        Console.WriteLine("Warning: This is intended for Bee's use only, so it's quite unfriendly");
-                        string filename = Console.ReadLine();
-                        byte[] data = File.ReadAllBytes(filename);
-                        byte[] hash;
-                        using (SHA512 shaM = new SHA512Managed())
-                        {
-                            hash = shaM.ComputeHash(data);
-                        }
-                        Console.WriteLine(Convert.ToBase64String(hash));
-                        break;
-                    }
-					}
-					if (flag3)
+					if (ActionIsQueued)
 					{
 						QueuedAction = null;
 					}
