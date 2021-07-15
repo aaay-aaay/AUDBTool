@@ -22,8 +22,8 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 			Console.SetIn(new StreamReader(Console.OpenStandardInput(8192), Console.InputEncoding, false, 8192));
 			WebClient wc = new WebClient();
 			CheckUpdate(wc);
-			bool properKeyFound = false;
-			bool TMKeyFound = false;
+			bool hasKey = false;
+			bool keySaved = false;
 			RSACryptoServiceProvider rsa_csp = new RSACryptoServiceProvider();
 			RSAParameters currentKey = default(RSAParameters);
 			if (File.Exists("AUDB_RSA_KEY.txt"))
@@ -31,20 +31,20 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 				if (PromptBinary("Existing key found, use it?"))
 				{
 					currentKey = ReadKey(currentKey, "AUDB_RSA_KEY.txt");
-					properKeyFound = true;
-					TMKeyFound = true;
+					hasKey = true;
+					keySaved = true;
 				}
 			}
-			if (!properKeyFound && File.Exists("RSA_KEY.txt"))
+			if (!hasKey && File.Exists("RSA_KEY.txt"))
 			{
 				if (PromptBinary("Found existing key from ToolMain, use it?"))
 				{
 					currentKey = ReadKey(currentKey, "RSA_KEY.txt");
-					properKeyFound = true;
-					TMKeyFound = true;
+					hasKey = true;
+					keySaved = true;
 				}
 			}
-			if (!properKeyFound)
+			if (!hasKey)
 			{
 				if (PromptBinary("No key found. Generate a new one?"))
 				{
@@ -52,11 +52,11 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 					{
 						currentKey = new_csp.ExportParameters(true);
 					}
-					properKeyFound = true;
+					hasKey = true;
 				}
 			}
 			string[] options;
-			if (properKeyFound)
+			if (hasKey)
 			{
 				rsa_csp.ImportParameters(currentKey);
 				options = new string[]
@@ -81,12 +81,12 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 					"versions",
                     "hash"
 				};
-				TMKeyFound = true;
+				keySaved = true;
 			}
 			string QueuedAction = null;
 			int currModID = -1;
 			int currUID = -1;
-			if (properKeyFound)
+			if (hasKey)
 			{
 				currUID = GetKeyID(currentKey, wc);
 			}
@@ -116,13 +116,13 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 									}
 								}
 								SaveKey(currentKey, SelectedKeySaveLoc);
-								TMKeyFound = true;
+								keySaved = true;
 								break;
 							}
 						case "close":
 							{
 								string exitConfMessage = "Are you sure you want to close the AUDBTool?";
-								if (!TMKeyFound) exitConfMessage += " You have an unsaved key!";
+								if (!keySaved) exitConfMessage += " You have an unsaved key!";
 								if (PromptBinary(exitConfMessage)) return;
 								break;
 							}
@@ -169,7 +169,7 @@ namespace PastebinMachine.AutoUpdate.CryptoTool
 											break;
 										}
 									}
-									else if (SelectedEndpoint.flags.Contains("key") && !properKeyFound)
+									else if (SelectedEndpoint.flags.Contains("key") && !hasKey)
 									{
 										Console.WriteLine("This endpoint requires a key, but you do not have one.");
 									}
